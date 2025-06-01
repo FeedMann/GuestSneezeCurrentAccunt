@@ -3,17 +3,23 @@ const fs = require('fs');
 
 const url = 'https://www.moddb.com/mods/solo-fortress-2/reviews/980518';
 
-https.get(url, (res) => {
+https.get(url, {
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+  }
+}, (res) => {
   let html = '';
 
   res.on('data', chunk => html += chunk);
   res.on('end', () => {
+    // Extract username and review date from HTML
     const userMatch = html.match(/<span class="heading">(.*?) says<\/span>/i);
     const dateMatch = html.match(/<span class="reviewdate">(.*?)<\/span>/i);
 
     const username = userMatch ? userMatch[1] : 'Unknown';
     const rawDate = dateMatch ? dateMatch[1] : 'Unknown';
 
+    // Format the date to Europe/Berlin timezone
     let europeanTime = 'Unavailable';
     try {
       const date = new Date(rawDate + ' UTC');
@@ -26,8 +32,11 @@ https.get(url, (res) => {
         hour: '2-digit',
         minute: '2-digit',
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('Date formatting error:', e.message);
+    }
 
+    // Create the HTML content
     const output = `
 <!DOCTYPE html>
 <html>
@@ -59,9 +68,10 @@ https.get(url, (res) => {
 </html>
 `;
 
+    // Write to index.html
     fs.writeFileSync('index.html', output);
-    console.log(`✅ index.html updated with username "${username}"`);
+    console.log(`✅ Updated index.html with username "${username}" and date "${europeanTime}"`);
   });
 }).on('error', err => {
-  console.error('Fetch error:', err.message);
+  console.error('❌ Fetch error:', err.message);
 });
